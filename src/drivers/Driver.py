@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
-import enum
+from enum import Enum
 
-from drivers.DrivingArbiter import SpeedController, SteeringController
-
-class RequestType(enum):
+class RequestType(Enum):
     Steering = 1
     Speed = 2
     All = 3
 
-class DriverPriority(enum):
+class DriverPriority(Enum):
     # only interrupts if has a strictly higher priority
     Low = 0
     Medium = 1
@@ -31,26 +29,26 @@ class DriverPriority(enum):
 
 class Driver(ABC):
 
-    @abstractmethod
     @property
-    def id() -> str:
+    @abstractmethod
+    def id(self):
         pass
 
     def equals(self, other) -> bool:
         return self.id == other.id
 
     @abstractmethod
-    def onSteeringGranted(self, controller: SteeringController):
+    def onSteeringGranted(self, controller):
         pass
 
     @abstractmethod
-    def onSpeedGranted(self, controller: SpeedController):
+    def onSpeedGranted(self, controller):
         pass
 
     @abstractmethod
-    def onSteeringRevoked(self):
+    def onSteeringRevoked(self, willReturn):
         pass
 
     @abstractmethod
-    def onSpeedRevoked(self):
+    def onSpeedRevoked(self, willReturn):
         pass

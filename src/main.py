@@ -2,7 +2,10 @@ from argparse import ArgumentParser
 import pathlib
 from airsim.client import CarClient
 from VisionDelegate import VisionDelegate
+from drivers.DrivingArbiter import DrivingArbiter
+from drivers.LaneDetection import LaneDetection
 from utils import get_image
+from time import time
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -25,10 +28,19 @@ if __name__ == '__main__':
         default=32
     )
     args = parser.parse_args()
-
-    client = CarClient()
-    client.confirmConnection()
-    client.enableApiControl(False)
-
-    delegate = VisionDelegate(args.model, lambda: get_image(client), args.numthreads, args.threshold)
-    delegate.start_debug()
+    carClient = CarClient()
+    carClient.confirmConnection()
+    carClient.enableApiControl(True)
+    drivingArbiter = DrivingArbiter(carClient)
+    visionDelegate = VisionDelegate(args.model, lambda: get_image(carClient), args.numthreads, args.threshold)
+    laneDetection = LaneDetection(drivingArbiter, carClient)
+    laneDetection.start()
+    
+    ### Image loop
+    last_loop = time()
+    while True:
+        print(f"loop delay: {time() - last_loop}")
+        last_loop = time()
+        img = get_image(carClient)
+        laneDetection.follow_lane(img)
+        visionDelegate.debug_thread(img)

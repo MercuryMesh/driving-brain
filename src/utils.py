@@ -1,7 +1,9 @@
+from airsim.client import CarClient
 import cv2
 from airsim import ImageRequest, ImageType
 import numpy as np
 import signal
+from threading import Thread
 
 class GracefulKiller:
     killed = False
@@ -13,6 +15,7 @@ class GracefulKiller:
     def exit_gracefully(self, *args):
         self.killed = True
         self._on_kill()
+        exit()
 
 colors = [
     'red',
@@ -28,7 +31,21 @@ class_names = [
     'sign'
 ]
 
-def get_image(client):
+class ThreadWithReturnValue(Thread):
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args,
+                                                **self._kwargs)
+    def join(self, *args):
+        Thread.join(self, *args)
+        return self._return
+
+
+def get_image(client: CarClient):
     image_response = client.simGetImages([ImageRequest(0, ImageType.Scene, False, False)])[0]
     arr = np.frombuffer(image_response.image_data_uint8, dtype=np.uint8)
     image_bgr = arr.reshape(image_response.height, image_response.width, 3)
