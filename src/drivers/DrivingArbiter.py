@@ -20,12 +20,15 @@ class Allocation:
 RequestQueue = List[Allocation]
 
 class Arbiter:
-    _requestQueue: RequestQueue = []
+    _requestQueue: RequestQueue = None
     _currentAllocation: Allocation = None
 
     # After a Driver receives an allocation, it may return control to the previous Driver
     # This should be specified in the requestControl function
     _returnDriver: Allocation = None
+
+    def __init__(self):
+        self._requestQueue = []
 
     # insert ahead of the first object you have priority over
     def _findInsertIndex(self, priority: DriverPriority) -> int:        

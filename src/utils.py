@@ -1,10 +1,12 @@
+from time import sleep
+from typing import Tuple
 from airsim.client import CarClient
 from airsim.types import LidarData
 import cv2
 from airsim import ImageRequest, ImageType
 import numpy as np
 import signal
-from threading import Thread, Lock
+from threading import Event, Thread, Lock
 import numpy
 
 class GracefulKiller:
@@ -46,6 +48,34 @@ class ThreadWithReturnValue(Thread):
     def join(self, *args):
         Thread.join(self, *args)
         return self._return
+
+# Think of this class as a single-instruction multiple-data accelerator
+class RerunableThread:
+    args: Tuple = None
+
+    @property
+    def is_running(self) -> bool:
+        return self._is_running.is_set()
+
+    def __init__(self, target, name=None):
+        self._is_running = Event()
+        self._target = target
+        self._thread = Thread(target=self._threadRunLoop, name=name)
+        self._thread.setDaemon(True)
+        self._thread.start()
+
+    def run(self, args: Tuple):
+        # print(args)
+        self.args = args
+        self._is_running.set()
+
+    def _threadRunLoop(self):
+        while True:
+            if self._is_running.is_set():
+                self._target(*(self.args))
+                self._is_running.clear()
+            else:
+                sleep(0.01)
 
 def parse_lidar_data(data: LidarData) -> numpy.ndarray:
     points = numpy.array(data.point_cloud, dtype=numpy.dtype('f4'))

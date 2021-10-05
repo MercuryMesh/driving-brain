@@ -1,3 +1,4 @@
+from time import time
 from airsim.types import LidarData
 import numpy
 from numpy.lib.arraysetops import isin

@@ -8,7 +8,7 @@ from VisionDelegate import VisionDelegate
 from drivers.DrivingArbiter import DrivingArbiter
 from drivers.LIDARDriver import LIDARDriver
 from drivers.LaneDetection import LaneDetection
-from utils import get_image, airsimIOLock
+from utils import RerunableThread, get_image, airsimIOLock
 from time import time
 
 if __name__ == '__main__':
@@ -43,8 +43,9 @@ if __name__ == '__main__':
 
     maxLoopDelay = 0.0
     lastLoop = time()
-    lastLidarThread: Thread = None
-    lastLaneThread: Thread = None
+    laneThread = RerunableThread(laneDetection.follow_lane)
+
+    lidarThread = RerunableThread(lidarDriver.setSpeed, name="lidarThread1")
     while True:
         loopDelay = time() - lastLoop
         if loopDelay > maxLoopDelay:
@@ -55,13 +56,9 @@ if __name__ == '__main__':
         img = get_image(carClient)
         lidarData = carClient.getLidarData()
         currentSpeed = carClient.getCarState().speed
-        if lastLaneThread is None or not lastLaneThread.is_alive():
-            lastLaneThread = Thread(target=laneDetection.follow_lane, args = (img,))
-            lastLaneThread.setDaemon(True)
-            lastLaneThread.start()
+        if not laneThread.is_running:
+            laneThread.run((img, ))
         # visionDelegate.debug_thread(img)
 
-        if lastLidarThread is None or not lastLidarThread.is_alive():
-            lastLidarThread = Thread(target=lidarDriver.setSpeed, args=(lidarData, currentSpeed,))
-            lastLidarThread.setDaemon(True)
-            lastLidarThread.start()
+        if not lidarThread.is_running:
+            lidarThread.run((lidarData, currentSpeed,))
