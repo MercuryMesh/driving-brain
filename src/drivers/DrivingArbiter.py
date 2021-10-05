@@ -1,6 +1,6 @@
 from airsim.client import CarClient
 from typing import Callable, List, NamedTuple
-from threading import Event, Thread, Timer
+from threading import Event, Lock, Thread, Timer
 from drivers.Driver import Driver, DriverPriority
 from utils import airsimIOLock, GracefulKiller
 
@@ -19,7 +19,9 @@ class Allocation:
 
 RequestQueue = List[Allocation]
 
+# Arbiters should be thread-safe by using locks to protect shared memory accesses.
 class Arbiter:
+    _queueLock: Lock = None
     _requestQueue: RequestQueue = None
     _currentAllocation: Allocation = None
 
@@ -29,6 +31,7 @@ class Arbiter:
 
     def __init__(self):
         self._requestQueue = []
+        self._queueLock = Lock()
 
     # insert ahead of the first object you have priority over
     def _findInsertIndex(self, priority: DriverPriority) -> int:        
@@ -38,46 +41,56 @@ class Arbiter:
         return len(self._requestQueue)
 
     def requestControl(self, requester: Requester, priority: DriverPriority, returnControl=True) -> bool:
+        self._queueLock.acquire()
         if self._currentAllocation is None:
+            self._queueLock.release()
             requester.onGranted()
             return True
 
         # if they already have control, don't change grant
         if (requester.id == self._currentAllocation.driver.id):
+            self._queueLock.release()
             requester.onGranted()
             return True
 
         if DriverPriority.hasPriority(requester, self._currentAllocation.priority):
             if returnControl:
                 self._returnDriver = self._currentAllocation
+            self._currentAllocation = Allocation(requester, priority)
+            self._queueLock.release()
+
             # revoke control
             self._currentAllocation.driver.onRevoked(returnControl)
             # grant control
             requester.onGranted()
-            self._currentAllocation = Allocation(requester, priority)
             return True
         else:
             index = self._findInsertIndex(priority)
             self._requestQueue.insert(index, Allocation(requester, priority))
+            self._queueLock.release()
             return False
     
     def giveUpControl(self, requester: Requester):
+        self._queueLock.acquire()
         # nop if not currently in control
         if requester.id != self._currentAllocation.driver.id:
+            self._queueLock.release()
             return
 
         requester.onRevoked(False)
         
         if self._returnDriver is not None:
             self._currentAllocation = self._returnDriver
-            self._currentAllocation.driver.onGranted()
             self._returnDriver = None
+            self._queueLock.release()
+            self._currentAllocation.driver.onGranted()
             return
 
         if len(self._requestQueue) == 0:
             raise RuntimeError("giveUpControl called with no elements in the request queue")
         
         self._currentAllocation = self._requestQueue.pop(0)
+        self._queueLock.release()
         self._currentAllocation.driver.onGranted()
 
 class DrivingArbiter:
