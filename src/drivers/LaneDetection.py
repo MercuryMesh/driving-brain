@@ -22,7 +22,7 @@ class LaneDetection(Driver):
         logging.info('Creating a lane_follower...')
         self._drivingArbiter = drivingArbiter
         self._carClient = carClient
-        self._killer = GracefulKiller(lambda: self.controlEvent.clear())
+        # self._killer = GracefulKiller(lambda: self.controlEvent.clear())
 
     def start(self):
         if not self._drivingArbiter.requestSteeringControl(self, DriverPriority.Low, returnControl=False):
@@ -49,6 +49,7 @@ class LaneDetection(Driver):
                 self.follow_lane(img)
                 
     def follow_lane(self, frame):
+        if self.steeringController is None: return
         # Main entry point of the lane follower
         show_image("orig", frame)
         lane_lines, new_frame = detect_lane(frame)        
@@ -57,7 +58,7 @@ class LaneDetection(Driver):
             return frame
         new_steering_angle = compute_steering_angle(new_frame, lane_lines)
         if self._last_angle is not None:
-            new_steering_angle = stabilize_steering_angle(self._last_angle, new_steering_angle, 2, 2, 1)
+            new_steering_angle = stabilize_steering_angle(self._last_angle, new_steering_angle, 2, 3)
         self._last_angle = new_steering_angle
         if self.steeringController is not None:
             self.steeringController.steering = new_steering_angle
@@ -196,7 +197,7 @@ def compute_steering_angle(frame, lane_lines):
     else:
         _, _, left_x2, _ = lane_lines[0][0]
         _, _, right_x2, _ = lane_lines[1][0]
-        camera_mid_offset_percent = 0.0 # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
+        camera_mid_offset_percent = -0.03 # 0.0 means car pointing to center, -0.03: car is centered to left, +0.03 means car pointing to right
         mid = int(width / 2 * (1 + camera_mid_offset_percent))
         x_offset = (left_x2 + right_x2) / 2 - mid
 

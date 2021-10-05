@@ -1,9 +1,11 @@
 from airsim.client import CarClient
+from airsim.types import LidarData
 import cv2
 from airsim import ImageRequest, ImageType
 import numpy as np
 import signal
-from threading import Thread
+from threading import Thread, Lock
+import numpy
 
 class GracefulKiller:
     killed = False
@@ -31,6 +33,7 @@ class_names = [
     'sign'
 ]
 
+airsimIOLock = Lock()
 class ThreadWithReturnValue(Thread):
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs={}, Verbose=None):
@@ -44,6 +47,15 @@ class ThreadWithReturnValue(Thread):
         Thread.join(self, *args)
         return self._return
 
+def parse_lidar_data(data: LidarData) -> numpy.ndarray:
+    points = numpy.array(data.point_cloud, dtype=numpy.dtype('f4'))
+    points = numpy.reshape(points, (int(points.shape[0] / 3), 3))
+    # points = list(map(lambda p: {"point": p, "distance": distance_of_point(p)}, points))
+    return points
+
+def distance_of_point(to_point, from_point):
+    sum = np.sum(np.square( from_point - to_point ))
+    return np.sqrt(sum)
 
 def get_image(client: CarClient):
     image_response = client.simGetImages([ImageRequest(0, ImageType.Scene, False, False)])[0]

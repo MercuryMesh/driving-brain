@@ -1,7 +1,8 @@
 from airsim.client import CarClient
 from typing import Callable, List, NamedTuple
-
+from threading import Event, Thread, Timer
 from drivers.Driver import Driver, DriverPriority
+from utils import airsimIOLock, GracefulKiller
 
 class Requester(NamedTuple):
     id: str
@@ -81,8 +82,10 @@ class DrivingArbiter:
     _steeringArbiter = Arbiter()
 
     def __init__(self, client: CarClient):
+        self._client = client
         self._speedController = SpeedController(client)
         self._steeringController = SteeringController(client)
+        # GracefulKiller(self._updating.clear)
 
     def requestSteeringControl(self, driver: Driver, priority: DriverPriority, returnControl=True):
         requester = Requester(driver.id, lambda: driver.onSteeringGranted(self._steeringController), driver.onSteeringRevoked)
@@ -100,49 +103,22 @@ class DrivingArbiter:
         requester = Requester(driver.id, lambda: driver.onSpeedGranted(self._speedController), driver.onSpeedRevoked)
         return self._speedArbiter.giveUpControl(requester)
 
+    def sendBatch(self):
+        controls = self._client.getCarControls()
+        controls.throttle = self._speedController.throttle
+        controls.brake = self._speedController.brake
+        controls.steering = self._steeringController.steering
+        self._client.setCarControls(controls)
+
 class SpeedController:
     def __init__(self, client: CarClient):
-        self._client = client
-
-    @property
-    def throttle(self):
-        throttle = self._client.getCarControls().throttle
-        return throttle
-
-    @throttle.setter
-    def throttle(self, new_throttle):
-        controls = self._client.getCarControls()
-        controls.throttle = new_throttle
-        self._client.setCarControls(controls)
-
-    @property 
-    def brake(self):
-        brake = self._client.getCarControls().brake
-        return brake
-    
-    @brake.setter
-    def brake(self, new_brake):
-        controls = self._client.getCarControls()
-        controls.brake = new_brake
-        self._client.setCarControls(controls)
-        
+       controls = client.getCarControls()
+       self.throttle = controls.throttle
+       self.brake = controls.brake
 
 class SteeringController:
-    def __init__(self, client: CarClient):
-        self._client = client
+    steering = 0
 
-    @property
-    def steering(self):
-        steering = self._client.getCarControls().steering
-        return steering
-    
-    @steering.setter
-    def steering(self, new_steering):
-        controls = self._client.getCarControls()
-        controls.steering = new_steering
-        if self._client.getCarState().speed < 5:
-            controls.throttle = 2
-        else:
-            controls.throttle = 0
-        self._client.setCarControls(controls)
-        
+    def __init__(self, client: CarClient):
+        carControls = client.getCarControls()
+        self.steering = carControls.steering
