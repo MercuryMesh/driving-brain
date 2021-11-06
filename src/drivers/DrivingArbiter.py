@@ -44,6 +44,7 @@ class Arbiter:
         self._queueLock.acquire()
         if self._currentAllocation is None:
             self._queueLock.release()
+            self._currentAllocation = Allocation(requester, priority)
             requester.onGranted()
             return True
 
@@ -53,14 +54,13 @@ class Arbiter:
             requester.onGranted()
             return True
 
-        if DriverPriority.hasPriority(requester, self._currentAllocation.priority):
+        if DriverPriority.hasPriority(priority, self._currentAllocation.priority):
             if returnControl:
                 self._returnDriver = self._currentAllocation
-            self._currentAllocation = Allocation(requester, priority)
-            self._queueLock.release()
-
             # revoke control
             self._currentAllocation.driver.onRevoked(returnControl)
+            self._currentAllocation = Allocation(requester, priority)
+            self._queueLock.release()
             # grant control
             requester.onGranted()
             return True
@@ -73,7 +73,7 @@ class Arbiter:
     def giveUpControl(self, requester: Requester):
         self._queueLock.acquire()
         # nop if not currently in control
-        if requester.id != self._currentAllocation.driver.id:
+        if self._currentAllocation is None or requester.id != self._currentAllocation.driver.id:
             self._queueLock.release()
             return
 

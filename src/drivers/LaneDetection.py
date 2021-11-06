@@ -5,7 +5,7 @@ import logging
 import math
 from drivers.Driver import Driver, DriverPriority
 
-from drivers.DrivingArbiter import DrivingArbiter, SteeringController
+from drivers.DrivingArbiter import DrivingArbiter, SpeedController, SteeringController
 from utils import GracefulKiller, get_image
 from threading import Event, Thread
 
@@ -15,40 +15,33 @@ class LaneDetection(Driver):
     id = "lane-detection"
     controlEvent = Event()
     steeringController: SteeringController = None
-    canTakeFrame = False
+    speedController: SpeedController = None
     _last_angle = None
 
-    def __init__(self, drivingArbiter: DrivingArbiter, carClient: CarClient):
+    def __init__(self, drivingArbiter: DrivingArbiter):
         logging.info('Creating a lane_follower...')
         self._drivingArbiter = drivingArbiter
-        self._carClient = carClient
         # self._killer = GracefulKiller(lambda: self.controlEvent.clear())
 
     def start(self):
         if not self._drivingArbiter.requestSteeringControl(self, DriverPriority.Low, returnControl=False):
             raise RuntimeWarning("LaneDetection was not granted synchronous steering control. This should be the first connected driver.")
-    
+        if not self._drivingArbiter.requestSpeedControl(self, DriverPriority.Low, returnControl=False):
+            raise RuntimeWarning("LaneDetection was not granted synchronous speed control. This should be the first connected driver.")
+
     def onSteeringGranted(self, controller: SteeringController):
         self.steeringController = controller
-        self.canTakeFrame = True
 
     def onSteeringRevoked(self, _):
-        self.canTakeFrame = False
         self.steeringController = None
 
     def onSpeedGranted(self, controller):
-        return super().onSpeedGranted(controller)
+        self.speedController = controller
 
     def onSpeedRevoked(self, willReturn):
-        return super().onSpeedRevoked(willReturn)
-
-    def follow_loop(self):
-        while (self.controlEvent.is_set()): 
-            img = get_image(self._carClient)
-            if img is not None:
-                self.follow_lane(img)
+        self.speedController = None
                 
-    def follow_lane(self, frame):
+    def follow_lane(self, frame, currentSpeed):
         if self.steeringController is None: return
         # Main entry point of the lane follower
         show_image("orig", frame)
@@ -60,8 +53,15 @@ class LaneDetection(Driver):
         if self._last_angle is not None:
             new_steering_angle = stabilize_steering_angle(self._last_angle, new_steering_angle, 2, 3)
         self._last_angle = new_steering_angle
-        if self.steeringController is not None:
-            self.steeringController.steering = new_steering_angle
+        self.steeringController.steering = new_steering_angle
+        if self.speedController is not None:
+            should_slow = currentSpeed > 15 or new_steering_angle >= 2
+            if should_slow:
+                self.speedController.throttle = 0
+                self.speedController.brake = 0
+            else:
+                self.speedController.throttle = 2
+                self.speedController.brake = 0
         
 
 

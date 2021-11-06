@@ -6,9 +6,9 @@ from airsim.client import CarClient
 from msgpackrpc import loop
 from VisionDelegate import VisionDelegate
 from drivers.DrivingArbiter import DrivingArbiter
-from drivers.LIDARDriver import LIDARDriver
+from drivers.LIDARDriver import SIDE_REGION, LIDARDriver
 from drivers.LaneDetection import LaneDetection
-from utils import RerunableThread, get_image, airsimIOLock
+from utils import RerunableThread, calculateCenterPoint, get_image, class_names, parse_lidar_data
 from time import time
 
 if __name__ == '__main__':
@@ -36,16 +36,15 @@ if __name__ == '__main__':
     carClient.confirmConnection()
     carClient.enableApiControl(True)
     drivingArbiter = DrivingArbiter(carClient)
-    visionDelegate = VisionDelegate(args.model, lambda: get_image(carClient), args.numthreads, args.threshold)
-    laneDetection = LaneDetection(drivingArbiter, carClient)
-    lidarDriver = LIDARDriver(drivingArbiter)
+    visionDelegate = VisionDelegate(args.model, args.numthreads, args.threshold)
+    laneDetection = LaneDetection(drivingArbiter)
+    lidarDriver = LIDARDriver(drivingArbiter, visionDelegate)
     laneDetection.start()
 
     maxLoopDelay = 0.0
     lastLoop = time()
     laneThread = RerunableThread(laneDetection.follow_lane)
-
-    lidarThread = RerunableThread(lidarDriver.setSpeed, name="lidarThread1")
+    lidarThread = RerunableThread(lidarDriver.checkLidar, name="lidarThread1")
     while True:
         loopDelay = time() - lastLoop
         if loopDelay > maxLoopDelay:
@@ -56,9 +55,9 @@ if __name__ == '__main__':
         img = get_image(carClient)
         lidarData = carClient.getLidarData()
         currentSpeed = carClient.getCarState().speed
-        if not laneThread.is_running:
-            laneThread.run((img, ))
-        # visionDelegate.debug_thread(img)
-
+        # lidarDriver.debugLidar(lidarData)
+        # lidarDriver.checkLidar(lidarData, currentSpeed, img)
+        # if not laneThread.is_running:
+        #     laneThread.run((img, currentSpeed,))
         if not lidarThread.is_running:
-            lidarThread.run((lidarData, currentSpeed,))
+            lidarThread.run((lidarData, currentSpeed, img))

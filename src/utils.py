@@ -32,7 +32,8 @@ class_names = [
     'car',
     'pedestrian',
     'cyclist',
-    'sign'
+    'sign',
+    'unknown'
 ]
 
 airsimIOLock = Lock()
@@ -76,6 +77,23 @@ class RerunableThread:
                 self._is_running.clear()
             else:
                 sleep(0.01)
+
+def calculateCenterPoint(group):
+    npa = numpy.array(group)
+    xyz = numpy.zeros(npa.shape[-1], dtype=npa.dtype)
+    for point in group:
+        xyz += point
+    return xyz / len(group)
+
+def calculateClosestPoint(group):
+    m = map(lambda g: g[1], group)
+    closest_offset = m.__next__()
+    closest_index = 0
+    for index, hoff in enumerate(m):
+        if abs(hoff) < closest_offset:
+            closest_offset = abs(hoff)
+            closest_offset = index + 1
+    return group[closest_index]
 
 def parse_lidar_data(data: LidarData) -> numpy.ndarray:
     points = numpy.array(data.point_cloud, dtype=numpy.dtype('f4'))

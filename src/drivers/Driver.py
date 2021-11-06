@@ -19,16 +19,15 @@ class DriverPriority(Enum):
     Uninteruptable = 100
 
     @staticmethod
-    def hasPriority(this, other):
+    def hasPriority(this: Enum, other: Enum):
         if other == DriverPriority.Uninteruptable:
             return False
         if other == DriverPriority.Crucial:
-            return this >= other
-        return this > other
+            return this.value >= other.value
+        return this.value > other.value
 
 
 class Driver(ABC):
-
     @property
     @abstractmethod
     def id(self):
