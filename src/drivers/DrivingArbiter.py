@@ -1,6 +1,7 @@
 from airsim.client import CarClient
 from typing import Callable, List, NamedTuple
 from threading import Event, Lock, Thread, Timer
+from daq.WorldMatrix import WorldMatrix
 from drivers.Driver import Driver, DriverPriority
 from utils import airsimIOLock, GracefulKiller
 
@@ -94,13 +95,12 @@ class Arbiter:
         self._currentAllocation.driver.onGranted()
 
 class DrivingArbiter:
-    _speedArbiter = Arbiter()
-    _steeringArbiter = Arbiter()
-
-    def __init__(self, client: CarClient):
+    def __init__(self, client: CarClient, worldMatrix: WorldMatrix):
         self._client = client
+        self._speedArbiter = Arbiter()
+        self._steeringArbiter = Arbiter()
         self._speedController = SpeedController(client)
-        self._steeringController = SteeringController(client)
+        self._steeringController = SteeringController(client, worldMatrix)
         # GracefulKiller(self._updating.clear)
 
     def requestSteeringControl(self, driver: Driver, priority: DriverPriority, returnControl=True):
@@ -135,6 +135,11 @@ class SpeedController:
 class SteeringController:
     steering = 0
 
-    def __init__(self, client: CarClient):
+    def set_steering(self, angle):
+        self.steering = angle
+        self._worldMatrix.set_direction(angle)
+
+    def __init__(self, client: CarClient, worldMatrix: WorldMatrix):
         carControls = client.getCarControls()
+        self._worldMatrix = worldMatrix
         self.steering = carControls.steering

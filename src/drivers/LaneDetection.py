@@ -53,14 +53,15 @@ class LaneDetection(Driver):
         if self._last_angle is not None:
             new_steering_angle = stabilize_steering_angle(self._last_angle, new_steering_angle, 2, 3)
         self._last_angle = new_steering_angle
-        self.steeringController.steering = new_steering_angle
+
+        self.steeringController.set_steering(new_steering_angle)
         if self.speedController is not None:
             should_slow = currentSpeed > 15 or new_steering_angle >= 2
             if should_slow:
                 self.speedController.throttle = 0
                 self.speedController.brake = 0
             else:
-                self.speedController.throttle = 2
+                self.speedController.throttle = 1
                 self.speedController.brake = 0
         
 
@@ -205,10 +206,6 @@ def compute_steering_angle(frame, lane_lines):
     y_offset = int(height / 2)
 
     angle_to_mid_radian = math.atan(x_offset / y_offset)  # angle (in radian) to center vertical line
-    angle_to_mid_deg = int(angle_to_mid_radian * 180.0 / math.pi)  # angle (in degrees) to center vertical line
-    steering_angle = angle_to_mid_deg  # this is the steering angle needed by picar front wheel
-
-    logging.debug('new steering angle: %s' % steering_angle)
     return angle_to_mid_radian
 
 

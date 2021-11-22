@@ -4,7 +4,8 @@ from threading import Thread
 from airsim import client
 from airsim.client import CarClient
 from msgpackrpc import loop
-from VisionDelegate import VisionDelegate
+from daq.VisionDelegate import VisionDelegate
+from daq.WorldMatrix import WorldMatrix
 from drivers.DrivingArbiter import DrivingArbiter
 from drivers.LIDARDriver import SIDE_REGION, LIDARDriver
 from drivers.LaneDetection import LaneDetection
@@ -35,10 +36,11 @@ if __name__ == '__main__':
     carClient = CarClient()
     carClient.confirmConnection()
     carClient.enableApiControl(True)
-    drivingArbiter = DrivingArbiter(carClient)
+    worldMatrix = WorldMatrix()
+    drivingArbiter = DrivingArbiter(carClient, worldMatrix)
     visionDelegate = VisionDelegate(args.model, args.numthreads, args.threshold)
     laneDetection = LaneDetection(drivingArbiter)
-    lidarDriver = LIDARDriver(drivingArbiter, visionDelegate)
+    lidarDriver = LIDARDriver(drivingArbiter, worldMatrix)
     laneDetection.start()
 
     maxLoopDelay = 0.0
@@ -55,9 +57,8 @@ if __name__ == '__main__':
         img = get_image(carClient)
         lidarData = carClient.getLidarData()
         currentSpeed = carClient.getCarState().speed
-        # lidarDriver.debugLidar(lidarData)
-        # lidarDriver.checkLidar(lidarData, currentSpeed, img)
-        # if not laneThread.is_running:
-        #     laneThread.run((img, currentSpeed,))
+        worldMatrix.set_speed(currentSpeed)
+        if not laneThread.is_running:
+            laneThread.run((img, currentSpeed,))
         if not lidarThread.is_running:
-            lidarThread.run((lidarData, currentSpeed, img))
+            lidarThread.run((lidarData, currentSpeed))
