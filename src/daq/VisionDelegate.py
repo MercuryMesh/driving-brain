@@ -1,12 +1,10 @@
 from math import pi
-from threading import Lock, Thread
+from threading import Lock
 from typing import Dict, List
 import tflite_runtime.interpreter as tflite
-from utils import ThreadWithReturnValue, colors, distance_of_point, set_input, detect_objects, calculateCenterPoint, class_names
+from utils.cv_utils import detect_objects
 from PIL import Image
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 
 CP_THRESHOLD = pi / 12
 class VisionDelegate:

@@ -1,4 +1,3 @@
-from airsim.client import CarClient
 import cv2
 import numpy as np
 import logging
@@ -6,8 +5,7 @@ import math
 from drivers.Driver import Driver, DriverPriority
 
 from drivers.DrivingArbiter import DrivingArbiter, SpeedController, SteeringController
-from utils import GracefulKiller, get_image
-from threading import Event, Thread
+from threading import Event
 
 _SHOW_IMAGE = False
 

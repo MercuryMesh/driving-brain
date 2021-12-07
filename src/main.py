@@ -1,16 +1,16 @@
-from argparse import ArgumentParser
 import pathlib
-from threading import Thread
-from airsim import client
-from airsim.client import CarClient
-from msgpackrpc import loop
-from daq.VisionDelegate import VisionDelegate
-from daq.WorldMatrix import WorldMatrix
-from drivers.DrivingArbiter import DrivingArbiter
-from drivers.LIDARDriver import SIDE_REGION, LIDARDriver
-from drivers.LaneDetection import LaneDetection
-from utils import RerunableThread, calculateCenterPoint, get_image, class_names, parse_lidar_data
+from argparse import ArgumentParser
 from time import time
+
+from airsim.client import CarClient
+
+from daq.LidarDelegate import LidarDelegate
+from daq.VisionDelegate import VisionDelegate
+from drivers.DrivingArbiter import DrivingArbiter
+from drivers.LaneDetection import LaneDetection
+from managers.AngularOccupancy import AngularOccupancy
+from utils.cv_utils import get_image
+from utils.RerunableThread import RerunableThread
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -36,13 +36,13 @@ if __name__ == '__main__':
     carClient = CarClient()
     carClient.confirmConnection()
     carClient.enableApiControl(True)
-    worldMatrix = WorldMatrix()
-    drivingArbiter = DrivingArbiter(carClient, worldMatrix)
+    drivingArbiter = DrivingArbiter(carClient)
     visionDelegate = VisionDelegate(args.model, args.numthreads, args.threshold)
     laneDetection = LaneDetection(drivingArbiter)
-    lidarDriver = LIDARDriver(drivingArbiter, worldMatrix)
-    laneDetection.start()
+    angularOccupancy = AngularOccupancy()
+    lidarDriver = LidarDelegate(angularOccupancy)
 
+    laneDetection.start()
     maxLoopDelay = 0.0
     lastLoop = time()
     laneThread = RerunableThread(laneDetection.follow_lane)
@@ -57,8 +57,10 @@ if __name__ == '__main__':
         img = get_image(carClient)
         lidarData = carClient.getLidarData()
         currentSpeed = carClient.getCarState().speed
-        worldMatrix.set_speed(currentSpeed)
+        lidarDriver.checkLidar(lidarData, currentSpeed)
         if not laneThread.is_running:
             laneThread.run((img, currentSpeed,))
-        if not lidarThread.is_running:
-            lidarThread.run((lidarData, currentSpeed))
+        # if not lidarThread.is_running:
+        #     lidarThread.run((lidarData, currentSpeed))
+        angularOccupancy.draw()
+        angularOccupancy.expire_occupants()
