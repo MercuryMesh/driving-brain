@@ -41,7 +41,7 @@ class LidarDelegate:
         flattened = data[:, :2]
         return numpy.unique(flattened, axis=0)
 
-    def checkLidar(self, lidarData: LidarData, currentSpeed: float):
+    def checkLidar(self, lidarData: LidarData):
         points = parse_lidar_data(lidarData)
         points = LidarDelegate.flatten(points)
         if len(points) == 0:

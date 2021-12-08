@@ -54,7 +54,7 @@ class LaneDetection(Driver):
 
         self.steeringController.set_steering(new_steering_angle)
         if self.speedController is not None:
-            should_slow = currentSpeed > 15 or new_steering_angle >= 2
+            should_slow = currentSpeed > 8 or new_steering_angle >= 2
             if should_slow:
                 self.speedController.throttle = 0
                 self.speedController.brake = 0

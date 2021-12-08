@@ -6,6 +6,7 @@ from airsim.client import CarClient
 
 from daq.LidarDelegate import LidarDelegate
 from daq.VisionDelegate import VisionDelegate
+from drivers.CollisionWatchdog import CollisionWatchdog
 from drivers.DrivingArbiter import DrivingArbiter
 from drivers.LaneDetection import LaneDetection
 from managers.AngularOccupancy import AngularOccupancy
@@ -41,12 +42,14 @@ if __name__ == '__main__':
     laneDetection = LaneDetection(drivingArbiter)
     angularOccupancy = AngularOccupancy()
     lidarDriver = LidarDelegate(angularOccupancy)
+    collisionWatchdog = CollisionWatchdog(drivingArbiter, angularOccupancy)
 
     laneDetection.start()
     maxLoopDelay = 0.0
     lastLoop = time()
-    laneThread = RerunableThread(laneDetection.follow_lane)
-    lidarThread = RerunableThread(lidarDriver.checkLidar, name="lidarThread1")
+    # laneThread = RerunableThread(laneDetection.follow_lane)
+    # lidarThread = RerunableThread(lidarDriver.checkLidar, name="lidarThread1")
+    # collisionThread = RerunableThread(collisionWatchdog.runLoop, name="collisionThread1")
     while True:
         loopDelay = time() - lastLoop
         if loopDelay > maxLoopDelay:
@@ -57,10 +60,8 @@ if __name__ == '__main__':
         img = get_image(carClient)
         lidarData = carClient.getLidarData()
         currentSpeed = carClient.getCarState().speed
-        lidarDriver.checkLidar(lidarData, currentSpeed)
-        if not laneThread.is_running:
-            laneThread.run((img, currentSpeed,))
-        # if not lidarThread.is_running:
-        #     lidarThread.run((lidarData, currentSpeed))
-        angularOccupancy.draw()
+        lidarDriver.checkLidar(lidarData)
+        collisionWatchdog.runLoop(currentSpeed)
+        laneDetection.follow_lane(img, currentSpeed)
         angularOccupancy.expire_occupants()
+        # angularOccupancy.draw()
