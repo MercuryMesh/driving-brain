@@ -9,7 +9,6 @@ from drivers.DrivingArbiter import DrivingArbiter
 from drivers.LaneDetection import LaneDetection
 from managers.AngularOccupancy import AngularOccupancy
 from utils.cv_utils import get_image
-from utils.RerunableThread import RerunableThread
 
 class Main:
     def __init__(self, carClient: CarClient, collisionWatchdog: CollisionWatchdog, drivingArbiter: DrivingArbiter, angularOccupancy: AngularOccupancy, visionDelegate: VisionDelegate):

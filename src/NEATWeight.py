@@ -7,6 +7,17 @@ from drivers.CollisionWatchdog import CollisionStrategy, CollisionWatchdog
 from drivers.DrivingArbiter import DrivingArbiter
 from managers.AngularOccupancy import DISCRETIZATION_AMOUNT, AngularOccupancy
 import pickle
+import paho.mqtt.client as mqtt
+
+try:
+    # New (From bcwadsworth MQTT bit)
+    client = mqtt.Client()
+    client.on_connect = lambda client, userdata, flags, rc : print("Connected with result code "+ str(rc))
+    client.on_message = lambda client, userdata, msg : print(msg.topic+" "+str(msg.payload))
+    client.connect("localhost", 1883, 60)
+    client.loop_start()
+except:
+    pass
 
 
 IDLE_THRESHOLD = 5
@@ -19,7 +30,7 @@ class NeatTrainer:
     def createAll(self):
         self.drivingArbiter = DrivingArbiter(self.carClient)
         self.visionDelegate = VisionDelegate('./models/model3.tflite', 16, 0.7)
-        self.angularOccupancy = AngularOccupancy(visionDelegate=self.visionDelegate)
+        self.angularOccupancy = AngularOccupancy(client=client, visionDelegate=self.visionDelegate)
         self.collisionWatchdog = CollisionWatchdog(self.drivingArbiter, self.angularOccupancy)
         self.mainLooper = Main(self.carClient, self.collisionWatchdog, self.drivingArbiter, self.angularOccupancy, self.visionDelegate)
 
