@@ -61,13 +61,13 @@ class CollisionWatchdog(Driver):
                 self._collisionStrategy = CollisionStrategy.braking
                 self._drivingArbiter.requestSpeedControl(self, DriverPriority.High)
                 return
-            elif angle < (np.pi) and occ.relative_velocity[1] < 10:
+            elif angle < (np.pi) and occ.relative_velocity[1] < 0:
                 print("swerve right")
                 self._collisionStrategy = CollisionStrategy.right
                 self._drivingArbiter.requestSteeringControl(self, DriverPriority.High)
                 self._drivingArbiter.requestSpeedControl(self, DriverPriority.Medium)
                 return
-            elif angle > (np.pi) and occ.relative_velocity[1] < 10:
+            elif angle > (np.pi) and occ.relative_velocity[1] < 0:
                 print("swerve left")
                 self._collisionStrategy = CollisionStrategy.left
                 self._drivingArbiter.requestSteeringControl(self, DriverPriority.High)
@@ -98,11 +98,11 @@ class CollisionWatchdog(Driver):
                     rightFree = False
                     break
                 else:
-                    self._steeringController.set_steering(0)
+                    self._steeringController.set_steering(dir * np.pi / 32)
 
         if rightFree:
             self._safeContinueCount += 1
-            if self._safeContinueCount >= 25:
+            if self._safeContinueCount >= 10:
                 print("correcting")
                 self._swerveCount = self._swerveCount - dir
                 self._steeringController.set_steering(-dir * np.pi / 8)

@@ -64,4 +64,4 @@ if __name__ == '__main__':
         collisionWatchdog.runLoop(currentSpeed)
         laneDetection.follow_lane(img, currentSpeed)
         angularOccupancy.expire_occupants()
-        # angularOccupancy.draw()
+        angularOccupancy.draw()

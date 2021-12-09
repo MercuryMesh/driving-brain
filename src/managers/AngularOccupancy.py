@@ -118,26 +118,26 @@ class AngularOccupancy:
         end_angle = np.arctan2(end_point[0], end_point[1]) - (np.pi / 2)
         mid_angle = (start_angle + end_angle) / 2
 
-        # print(start_angle)
-        # print(end_angle)
-        # print("========")
-
         curr_occ_ptr = self._occupant_search(mid_angle)
-        if curr_occ_ptr is None:
-            o = Occupant(new_blob[len(new_blob) // 2])
-
-            new_ptr = uuid4().int
-            self.occupant_reference[new_ptr] = o
-        else:
-            o = self.occupant_reference[curr_occ_ptr]
-            if o.distance - distance_of_point(start_point, (0, 0)) > 15:
-                return
-            o.update(center_point=new_blob[len(new_blob) // 2])
-            new_ptr = curr_occ_ptr
-            # remove all angular references to previous occupant version
+        new_occ = Occupant(new_blob[len(new_blob) // 2])
+        new_ptr = uuid4().int
+        if curr_occ_ptr is not None:
+            occ = self.occupant_reference[curr_occ_ptr]
+            # if big distance jump, keep closer
+            if abs(occ.distance - new_occ.distance) > 15 and new_occ.distance < occ.distance:
+                occ.kill()
+                self.occupant_reference.pop(curr_occ_ptr)
+                self.occupant_reference[new_ptr] = new_occ
+            # otherwise update
+            else:
+                new_ptr = curr_occ_ptr
+                occ.update_with(new_occ)
+                new_occ.kill()
             for i in range(0, DISCRETIZATION_AMOUNT):
-                if self.occupancy_list[i] == curr_occ_ptr:
-                    self.occupancy_list[i] = 0
+                    if self.occupancy_list[i] == curr_occ_ptr:
+                        self.occupancy_list[i] = 0
+        else:
+            self.occupant_reference[new_ptr] = new_occ
         # insert new pointers
         start_index = round(start_angle / (2 * np.pi) * DISCRETIZATION_AMOUNT)
         end_index = round(end_angle / (2 * np.pi) * DISCRETIZATION_AMOUNT)

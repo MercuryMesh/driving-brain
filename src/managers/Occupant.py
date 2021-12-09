@@ -51,6 +51,9 @@ class Occupant:
     def kill(self):
         self._timer.cancel()
 
+    def update_with(self, other):
+        self.update(other.classification, other.center_point)
+
     def update(self, classification = None, center_point = None):
         update_time = time_ns()
         time_delta = update_time - self._last_update_time
@@ -63,7 +66,7 @@ class Occupant:
         if center_point is not None:
             new_distance = distance_of_point(center_point, (0, 0))
             self.relative_speed = (self.distance - new_distance) / (time_delta * 1e9)
-            self.relative_velocity = (center_point - self.center_point) / (time_delta * 1e9)
+            self.relative_velocity = (self.center_point - center_point) / (time_delta * 1e9)
             self.distance = new_distance
             self.center_point = center_point
 
@@ -73,6 +76,8 @@ class Occupant:
         self.weight = new_weight
     
     def weigh(self) -> float:
+        return (15 - self.distance + self.relative_speed * 4) * self.probability
+
         if abs(self.center_angle) < (np.pi / 8):
             return ((self.relative_speed) + (50 / self.distance)) ** 2 * self.probability
         
