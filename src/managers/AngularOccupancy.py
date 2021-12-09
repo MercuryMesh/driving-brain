@@ -72,9 +72,9 @@ class AngularOccupancy:
         for i in range(0, DISCRETIZATION_AMOUNT):
             if self.occupancy_list[i] != 0:
                 occ = self.occupant_reference[self.occupancy_list[i]]
-                if occ.weight >= 10:
+                if occ.weight >= 20 or True:
 
-                    angle = i / DISCRETIZATION_AMOUNT * 2.0 * np.pi + (np.pi / 2)
+                    angle = i / DISCRETIZATION_AMOUNT * 2.0 * np.pi - (np.pi / 2)
                     tx = np.cos(angle)
                     ty = np.sin(angle)
                     x.append(tx)
@@ -82,7 +82,7 @@ class AngularOccupancy:
 
                     if last_label != self.occupancy_list[i]:
                         last_label = self.occupancy_list[i]
-                        self.ax.text(tx, ty + 0.1, "{:.2f}".format(self.occupant_reference[self.occupancy_list[i]].weight))
+                        self.ax.text(tx, ty + 0.1, "{:.2f}".format(self.occupant_reference[self.occupancy_list[i]].distance))
                         # self.ax.text(tx, ty + 0.1, angle)
                 
         self.ax.set_aspect(1)
@@ -114,8 +114,8 @@ class AngularOccupancy:
         start_point = new_blob[0]
         end_point = new_blob[-1]
 
-        start_angle = np.arctan2(start_point[0], start_point[1]) - (np.pi / 2)
-        end_angle = np.arctan2(end_point[0], end_point[1]) - (np.pi / 2)
+        start_angle = np.arctan2(start_point[0], start_point[1])
+        end_angle = np.arctan2(end_point[0], end_point[1])
         mid_angle = (start_angle + end_angle) / 2
 
         curr_occ_ptr = self._occupant_search(mid_angle)
@@ -124,7 +124,7 @@ class AngularOccupancy:
         if curr_occ_ptr is not None:
             occ = self.occupant_reference[curr_occ_ptr]
             # if big distance jump, keep closer
-            if abs(occ.distance - new_occ.distance) > 15 and new_occ.distance < occ.distance:
+            if abs(occ.distance - new_occ.distance) > 20:
                 occ.kill()
                 self.occupant_reference.pop(curr_occ_ptr)
                 self.occupant_reference[new_ptr] = new_occ

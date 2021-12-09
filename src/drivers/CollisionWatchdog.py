@@ -6,7 +6,7 @@ from managers.AngularOccupancy import DISCRETIZATION_AMOUNT, AngularOccupancy
 import numpy as np
 
 ACTIVATION_WEIGHT = 10
-FRONT_ANGLE = np.pi / 24
+FRONT_ANGLE = np.pi / 16
 
 class CollisionStrategy(enum.Enum):
     none = -1
@@ -39,10 +39,10 @@ class CollisionWatchdog(Driver):
             return
         elif self._collisionStrategy == CollisionStrategy.left:
             self.swerveLeft(currentSpeed)
-            return
+            
         elif self._collisionStrategy == CollisionStrategy.right:
             self.swerveRight(currentSpeed)
-            return
+            
         
         for i, occptr in enumerate(self._angularOccupancy.occupancy_list):
             if occptr == 0:
@@ -54,21 +54,27 @@ class CollisionWatchdog(Driver):
             
             angle = (i / DISCRETIZATION_AMOUNT) * np.pi * 2
 
-            if (abs(angle) < FRONT_ANGLE) and occ.relative_velocity[0] < 0:
-                print("brake")
-                print(f"for weight {occ.weight} and angle {angle}")
-                print(occ.center_point)
+            if (abs(angle) < FRONT_ANGLE) and occ.center_point[0] > 0:
+                # print("brake")
+                # print(f"for weight {occ.weight} and angle {angle}")
+                # print(occ.center_point)
                 self._collisionStrategy = CollisionStrategy.braking
                 self._drivingArbiter.requestSpeedControl(self, DriverPriority.High)
                 return
-            elif angle < (np.pi) and occ.relative_velocity[1] < 0:
-                print("swerve right")
+            elif angle < (np.pi) and self._collisionStrategy != CollisionStrategy.right:
+                # print("swerve right")
+                # print(f"for weight {occ.weight} and angle {angle}")
+                # print(occ.center_point)
+                # print(occ.relative_velocity)
                 self._collisionStrategy = CollisionStrategy.right
                 self._drivingArbiter.requestSteeringControl(self, DriverPriority.High)
                 self._drivingArbiter.requestSpeedControl(self, DriverPriority.Medium)
                 return
-            elif angle > (np.pi) and occ.relative_velocity[1] < 0:
-                print("swerve left")
+            elif angle > (np.pi) and self._collisionStrategy != CollisionStrategy.left:
+                # print("swerve left")
+                # print(f"for weight {occ.weight} and angle {angle}")
+                # print(occ.center_point)
+                # print(occ.relative_velocity)
                 self._collisionStrategy = CollisionStrategy.left
                 self._drivingArbiter.requestSteeringControl(self, DriverPriority.High)
                 self._drivingArbiter.requestSpeedControl(self, DriverPriority.Medium)
@@ -102,12 +108,12 @@ class CollisionWatchdog(Driver):
 
         if rightFree:
             self._safeContinueCount += 1
-            if self._safeContinueCount >= 10:
-                print("correcting")
+            if self._safeContinueCount >= 5:
+                # print("correcting")
                 self._swerveCount = self._swerveCount - dir
                 self._steeringController.set_steering(-dir * np.pi / 8)
                 if self._swerveCount >= 0:
-                    print("return")
+                    # print("return")
                     self._swerveCount = 0
                     self._safeContinueCount = 0
                     self._drivingArbiter.giveUpSteeringControl(self)
@@ -136,7 +142,7 @@ class CollisionWatchdog(Driver):
                 safe_to_continue = safe_to_continue and (occ.distance > 30) and (occ.weight < ACTIVATION_WEIGHT)
         if safe_to_continue:
             if self._safeContinueCount >= 25:
-                print("return")
+                # print("return")
                 self._drivingArbiter.giveUpSpeedControl(self)
                 self._safeContinueCount = 0
             self._safeContinueCount = self._safeContinueCount + 1

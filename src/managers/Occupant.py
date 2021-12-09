@@ -8,6 +8,8 @@ DECAY_FACTOR = 0.75
 DECAY_BIAS = 0.05
 DECAY_DELAY = 0.5
 
+DANGER_REGION = 1
+
 ROC_UPDATE_TIME = 1
 class Occupant:
     center_point: Tuple[np.float32, np.float32]
@@ -35,10 +37,10 @@ class Occupant:
 
         self.distance = distance_of_point(center_point, (0, 0))
         self.weight_roc = 0
-        self.probability = 1
+        self.probability = 0.75
         self._last_update_time = time_ns()
-        self.weight = self.weigh()
         self.relative_velocity = (0, 0)
+        self.weight = 0.0
         
         self._timer = Timer(DECAY_DELAY, self._decay)
         self._timer.start()
@@ -59,14 +61,14 @@ class Occupant:
         time_delta = update_time - self._last_update_time
         if time_delta < ROC_UPDATE_TIME:
             return
-        self.probability = 1
+        self.probability = min(1, self.probability * (1 + DECAY_FACTOR) + DECAY_BIAS)
 
         if classification is not None:
             self.classification = classification
         if center_point is not None:
             new_distance = distance_of_point(center_point, (0, 0))
-            self.relative_speed = (self.distance - new_distance) / (time_delta * 1e9)
-            self.relative_velocity = (self.center_point - center_point) / (time_delta * 1e9)
+            self.relative_speed = (self.distance - new_distance) * 1e9 / (time_delta)
+            self.relative_velocity = (center_point - self.center_point) * 1e9 / (time_delta)
             self.distance = new_distance
             self.center_point = center_point
 
@@ -74,12 +76,25 @@ class Occupant:
         self.weight_roc = (new_weight - self.weight) / (time_delta)
         self._last_update_time = time_ns()
         self.weight = new_weight
+
+    def set_weight(self, new_weight):
+        self.weight = new_weight
     
     def weigh(self) -> float:
-        return (15 - self.distance + self.relative_speed * 4) * self.probability
-
+        return self.weight
+        w = 0
         if abs(self.center_angle) < (np.pi / 8):
-            return ((self.relative_speed) + (50 / self.distance)) ** 2 * self.probability
-        
-        return (self.relative_speed * 5 / (self.distance)) * self.probability
-        return ((20 / self.distance) + self.relative_speed) * self.probability
+            bias = 5
+            s_check = 3
+            w += 10 / self.distance
+        else:
+            bias = 2
+            s_check = 2
+
+        for i in range(1, 101):
+            s_off = s_check/i
+            predicted_location = (self.center_point[0] + self.relative_velocity[0] * s_off, self.center_point[1] + self.relative_velocity[1] * s_off)
+            if abs(predicted_location[0]) < DANGER_REGION and predicted_location[1] < DANGER_REGION:
+                w += (bias - s_off)
+
+        return (w ) * self.probability

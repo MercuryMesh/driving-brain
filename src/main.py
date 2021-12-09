@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from time import time
 
 from airsim.client import CarClient
+import numpy
 
 from daq.LidarDelegate import LidarDelegate
 from daq.VisionDelegate import VisionDelegate
@@ -12,6 +13,7 @@ from drivers.LaneDetection import LaneDetection
 from managers.AngularOccupancy import AngularOccupancy
 from utils.cv_utils import get_image
 from utils.RerunableThread import RerunableThread
+from pstats import SortKey
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -43,25 +45,29 @@ if __name__ == '__main__':
     angularOccupancy = AngularOccupancy()
     lidarDriver = LidarDelegate(angularOccupancy)
     collisionWatchdog = CollisionWatchdog(drivingArbiter, angularOccupancy)
-
     laneDetection.start()
-    maxLoopDelay = 0.0
     lastLoop = time()
-    # laneThread = RerunableThread(laneDetection.follow_lane)
-    # lidarThread = RerunableThread(lidarDriver.checkLidar, name="lidarThread1")
-    # collisionThread = RerunableThread(collisionWatchdog.runLoop, name="collisionThread1")
+    laneThread = RerunableThread(laneDetection.follow_lane)
+
+    delays = numpy.zeros(50)
+    i = 0
     while True:
+        if i == 50:
+            a = numpy.average(delays)
+            print(f"Average loop time {a}s")
+            i = 0
         loopDelay = time() - lastLoop
-        if loopDelay > maxLoopDelay:
-            print(f"Max loop delay {loopDelay}s")
-            maxLoopDelay = loopDelay
+        delays[i] = loopDelay
+        i += 1
         lastLoop = time()
         drivingArbiter.sendBatch()
         img = get_image(carClient)
-        lidarData = carClient.getLidarData()
+        lidarData = carClient.getLidarData('MyLidar1')
         currentSpeed = carClient.getCarState().speed
         lidarDriver.checkLidar(lidarData)
         collisionWatchdog.runLoop(currentSpeed)
-        laneDetection.follow_lane(img, currentSpeed)
+        if not laneThread.is_running:
+            laneThread.run((img, currentSpeed))
         angularOccupancy.expire_occupants()
-        angularOccupancy.draw()
+        # angularOccupancy.draw()
+
