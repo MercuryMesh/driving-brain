@@ -39,10 +39,11 @@ class AngularOccupancy:
     occupancy_list: List[int]
     occupant_reference: Dict[int, Occupant]
 
-    def __init__(self):
+    def __init__(self, client):
         self.occupancy_list = [0] * DISCRETIZATION_AMOUNT
         self.occupant_reference = {}
         self._draw_init = False
+        self._client = client;
 
     def _occupant_search(self, centering_on, search_range = DEFAULT_SEARCH_RANGE):
         center_index = round(centering_on / (2 * np.pi) * DISCRETIZATION_AMOUNT)
@@ -90,6 +91,11 @@ class AngularOccupancy:
         self.ax.scatter(x, y)
         plt.draw()
         self.fig.canvas.flush_events()
+
+    def sendobj(self):
+        for x in self.occupant_reference:
+            obj = self.occupant_reference[x];
+            self._client.publish("objects", "{id: %d, posx: %3f, posy: %3f, class: %d}" %(x, obj.center_point[0], obj.center_point[1], obj.classification));
 
     def expire_occupants(self):
         for i in range(0, DISCRETIZATION_AMOUNT):

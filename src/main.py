@@ -13,6 +13,9 @@ from managers.AngularOccupancy import AngularOccupancy
 from utils.cv_utils import get_image
 from utils.RerunableThread import RerunableThread
 
+# New (From bcwadsworth MQTT bit)
+import paho.mqtt.client as mqtt
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     cwd = pathlib.Path(__file__).parent.absolute()
@@ -33,6 +36,15 @@ if __name__ == '__main__':
         type=int,
         default=32
     )
+
+    # New (From bcwadsworth MQTT bit)
+    client = mqtt.Client();
+    client.on_connect = lambda client, userdata, flags, rc : print("Connected with result code "+ str(rc));
+    client.on_message = lambda client, userdata, msg : print(msg.topic+" "+str(msg.payload));
+    client.connect("localhost", 1883, 60);
+    client.loop_start();
+
+
     args = parser.parse_args()
     carClient = CarClient()
     carClient.confirmConnection()
@@ -40,7 +52,7 @@ if __name__ == '__main__':
     drivingArbiter = DrivingArbiter(carClient)
     visionDelegate = VisionDelegate(args.model, args.numthreads, args.threshold)
     laneDetection = LaneDetection(drivingArbiter)
-    angularOccupancy = AngularOccupancy()
+    angularOccupancy = AngularOccupancy(client)
     lidarDriver = LidarDelegate(angularOccupancy)
     collisionWatchdog = CollisionWatchdog(drivingArbiter, angularOccupancy)
 
@@ -50,6 +62,7 @@ if __name__ == '__main__':
     # laneThread = RerunableThread(laneDetection.follow_lane)
     # lidarThread = RerunableThread(lidarDriver.checkLidar, name="lidarThread1")
     # collisionThread = RerunableThread(collisionWatchdog.runLoop, name="collisionThread1")
+
     while True:
         loopDelay = time() - lastLoop
         if loopDelay > maxLoopDelay:
@@ -65,3 +78,4 @@ if __name__ == '__main__':
         laneDetection.follow_lane(img, currentSpeed)
         angularOccupancy.expire_occupants()
         angularOccupancy.draw()
+        angularOccupancy.sendobj();
