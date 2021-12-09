@@ -22,10 +22,12 @@
 from threading import Lock
 import numpy as np
 from typing import Dict, List
+from daq.VisionDelegate import VisionDelegate
 from managers.Occupant import Occupant
 import matplotlib.pyplot as plt
 
 from uuid import uuid4
+from utils.RerunableThread import RerunableThread
 
 from utils.lidar_utils import distance_of_point
 
@@ -39,11 +41,13 @@ class AngularOccupancy:
     occupancy_list: List[int]
     occupant_reference: Dict[int, Occupant]
 
-    def __init__(self, client):
+    def __init__(self, client = None, visionDelegate: VisionDelegate = None):
         self.occupancy_list = [0] * DISCRETIZATION_AMOUNT
         self.occupant_reference = {}
         self._draw_init = False
-        self._client = client;
+        self._client = client
+        self.visionDelegate = visionDelegate
+        self.visionThread = RerunableThread(self.visionDelegate.run_detection)
 
     def _occupant_search(self, centering_on, search_range = DEFAULT_SEARCH_RANGE):
         center_index = round(centering_on / (2 * np.pi) * DISCRETIZATION_AMOUNT)
@@ -52,6 +56,27 @@ class AngularOccupancy:
             if o != 0:
                 return o
         return None
+
+    def categorize(self, frame):
+        if self.visionDelegate is None:
+            return
+        if self.visionThread.is_running:
+            hasCategorizable = False
+            searchRange = DISCRETIZATION_AMOUNT // 8
+            for i in range(-searchRange, searchRange):
+                if self.occupancy_list[i] != 0:
+                    hasCategorizable = True
+                    break
+            if not hasCategorizable:
+                return
+
+            categorized_id = 0
+            for i in range(-searchRange, searchRange):
+                if self.occupancy_list[i] != 0 and categorized_id != self.occupancy_list[i]:
+                    angle = (i / DISCRETIZATION_AMOUNT) * (np.pi * 2)
+                    self.occupant_reference[self.occupancy_list[i]].update(classification=self.visionDelegate.get_detection_for_angle(angle))
+            return
+        self.visionThread.run((frame,))
 
     def draw(self):
         if not self._draw_init:
@@ -96,6 +121,10 @@ class AngularOccupancy:
         for x in self.occupant_reference:
             obj = self.occupant_reference[x];
             self._client.publish("objects", "{id: %d, posx: %3f, posy: %3f, class: %d}" %(x, obj.center_point[0], obj.center_point[1], obj.classification));
+
+    def decay(self):
+        for id in self.occupant_reference:
+            self.occupant_reference[id].decay()
 
     def expire_occupants(self):
         for i in range(0, DISCRETIZATION_AMOUNT):

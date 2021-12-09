@@ -1,16 +1,10 @@
-import enum
-import sys
+
 from math import pi
 from time import sleep, time
-from typing import List, Tuple
 from airsim.types import GeoPoint, LidarData
 import numpy
-import matplotlib.pyplot as plt
-from drivers.Driver import DriverPriority, Driver
-from drivers.DrivingArbiter import DrivingArbiter, SpeedController
 from managers.AngularOccupancy import AngularOccupancy
-from utils.lidar_utils import distance_of_point, parse_lidar_data, calculateCenterPoint, groupContiguousPoints
-from utils.cv_utils import class_names
+from utils.lidar_utils import distance_of_point, parse_lidar_data, groupContiguousPoints
 
 HUMAN_STOP_DISTANCE = 15
 SIDE_REGION = 3

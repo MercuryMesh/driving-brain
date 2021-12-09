@@ -1,10 +1,10 @@
 import numpy as np
 from typing import Tuple
 from time import time_ns
+from NEATModel import neat_weigh
 from utils.lidar_utils import distance_of_point
-from threading import Timer
 
-DECAY_FACTOR = 0.75
+DECAY_FACTOR = 0.70
 DECAY_BIAS = 0.05
 DECAY_DELAY = 0.5
 
@@ -42,16 +42,20 @@ class Occupant:
         self.relative_velocity = (0, 0)
         self.weight = 0.0
         
-        self._timer = Timer(DECAY_DELAY, self._decay)
-        self._timer.start()
+        # self._timer = Timer(DECAY_DELAY, self._decay)
+        # self._timer.start()
 
-    def _decay(self):
+    # def _decay(self):
+    #     self.probability = (self.probability * DECAY_FACTOR) - DECAY_BIAS
+    #     self._timer = Timer(DECAY_DELAY, self._decay)
+    #     self._timer.start()
+
+    def decay(self):
         self.probability = (self.probability * DECAY_FACTOR) - DECAY_BIAS
-        self._timer = Timer(DECAY_DELAY, self._decay)
-        self._timer.start()
 
     def kill(self):
-        self._timer.cancel()
+        pass
+        # self._timer.cancel()
 
     def update_with(self, other):
         self.update(other.classification, other.center_point)
@@ -73,7 +77,7 @@ class Occupant:
             self.center_point = center_point
 
         new_weight = self.weigh()
-        self.weight_roc = (new_weight - self.weight) / (time_delta)
+        # self.weight_roc = (new_weight - self.weight) / (time_delta)
         self._last_update_time = time_ns()
         self.weight = new_weight
 
@@ -81,7 +85,8 @@ class Occupant:
         self.weight = new_weight
     
     def weigh(self) -> float:
-        return self.weight
+        w = neat_weigh(self)
+        return w
         w = 0
         if abs(self.center_angle) < (np.pi / 8):
             bias = 5

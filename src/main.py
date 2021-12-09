@@ -40,11 +40,11 @@ if __name__ == '__main__':
     )
 
     # New (From bcwadsworth MQTT bit)
-    client = mqtt.Client();
+    client = mqtt.Client()
     client.on_connect = lambda client, userdata, flags, rc : print("Connected with result code "+ str(rc));
     client.on_message = lambda client, userdata, msg : print(msg.topic+" "+str(msg.payload));
-    client.connect("localhost", 1883, 60);
-    client.loop_start();
+    # client.connect("localhost", 1883, 60)
+    # client.loop_start()
 
 
     args = parser.parse_args()
@@ -80,6 +80,7 @@ if __name__ == '__main__':
         collisionWatchdog.runLoop(currentSpeed)
         if not laneThread.is_running:
             laneThread.run((img, currentSpeed))
+        angularOccupancy.decay()
         angularOccupancy.expire_occupants()
         # angularOccupancy.draw()
-        angularOccupancy.sendobj()
+        # angularOccupancy.sendobj()
