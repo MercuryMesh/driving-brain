@@ -93,9 +93,16 @@ class AngularOccupancy:
         self.fig.canvas.flush_events()
 
     def sendobj(self):
+        arr = [];
         for x in self.occupant_reference:
             obj = self.occupant_reference[x];
-            self._client.publish("objects", "{id: %d, posx: %3f, posy: %3f, class: %d}" %(x, obj.center_point[0], obj.center_point[1], obj.classification));
+            if obj.probability <= EXPIRATION_PROBABILITY:
+                arr.append(x)
+            else:
+                self._client.publish("objects", "{\"id\": \"%d\", \"posx\": %3f, \"posy\": %3f, \"classify\": %d}" %(x, obj.center_point[0], obj.center_point[1], obj.classification));
+
+        for x in arr:
+            self.occupant_reference.pop(x).kill()
 
     def expire_occupants(self):
         for i in range(0, DISCRETIZATION_AMOUNT):

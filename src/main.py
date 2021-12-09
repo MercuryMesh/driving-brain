@@ -76,6 +76,6 @@ if __name__ == '__main__':
         lidarDriver.checkLidar(lidarData)
         collisionWatchdog.runLoop(currentSpeed)
         laneDetection.follow_lane(img, currentSpeed)
+        angularOccupancy.sendobj();
         angularOccupancy.expire_occupants()
         angularOccupancy.draw()
-        angularOccupancy.sendobj();
