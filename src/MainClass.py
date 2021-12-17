@@ -10,8 +10,22 @@ from drivers.LaneDetection import LaneDetection
 from managers.AngularOccupancy import AngularOccupancy
 from utils.cv_utils import get_image
 
+import argparse
+
 class Main:
     def __init__(self, carClient: CarClient, collisionWatchdog: CollisionWatchdog, drivingArbiter: DrivingArbiter, angularOccupancy: AngularOccupancy, visionDelegate: VisionDelegate):
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "--debug_cv",
+            type=bool,
+            default=False
+        )
+        parser.add_argument(
+            "--debug_ao",
+            type=bool,
+            default=False
+        )
+        self.args = parser.parse_args()
         self.carClient = carClient
         self.carClient.confirmConnection()
         self.carClient.enableApiControl(True)
@@ -34,8 +48,11 @@ class Main:
         self.collisionWatchdog.runLoop(currentSpeed)
         self.laneDetection.follow_lane(img, currentSpeed)
         self.angularOccupancy.decay()
+        self.angularOccupancy.sendobj()
         self.angularOccupancy.expire_occupants()
-        if self.loopCount == 0:
-            self.angularOccupancy.categorize(img)
+        self.angularOccupancy.categorize(img)
+        if self.loopCount == 0 and self.args.debug_cv:
             self.visionDelegate.draw()
-        self.loopCount = (self.loopCount + 1) % 10
+        if self.args.debug_ao:
+            self.angularOccupancy.draw()
+        self.loopCount = (self.loopCount + 1) % 5

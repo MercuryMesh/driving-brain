@@ -92,7 +92,7 @@ class NeatTrainer:
                             neat.DefaultSpeciesSet, neat.DefaultStagnation,
                             config_file)
         # p = neat.Population(config)
-        p = neat.Checkpointer.restore_checkpoint('./neat-checkpoint-15')
+        p = neat.Checkpointer.restore_checkpoint('./neat-checkpoint-25')
         p.add_reporter(neat.StdOutReporter(True))
         stats = neat.StatisticsReporter()
         p.add_reporter(stats)

@@ -6,7 +6,7 @@ reset_on_extinction = False
 
 [DefaultGenome]
 activation_default = relu
-activation_mutate_rate = 0.01
+activation_mutate_rate = 0.03
 activation_options = relu sigmoid
 
 # node bias options
@@ -20,7 +20,7 @@ bias_replace_rate       = 0.1
 
 # node aggregation options
 aggregation_default     = sum
-aggregation_mutate_rate = 0.0
+aggregation_mutate_rate = 0.01
 aggregation_options     = sum
 
 # genome compatibility options
@@ -61,8 +61,8 @@ weight_init_mean        = 0.0
 weight_init_stdev       = 1.0
 weight_max_value        = 30
 weight_min_value        = -30
-weight_mutate_power     = 0.5
-weight_mutate_rate      = 0.8
+weight_mutate_power     = 0.6
+weight_mutate_rate      = 0.5
 weight_replace_rate     = 0.1
 
 [DefaultSpeciesSet]
@@ -74,5 +74,5 @@ max_stagnation       = 20
 species_elitism      = 2
 
 [DefaultReproduction]
-elitism            = 1
+elitism            = 2
 survival_threshold = 0.2

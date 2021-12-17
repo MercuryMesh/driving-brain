@@ -85,7 +85,7 @@ class Occupant:
         self.weight = new_weight
     
     def weigh(self) -> float:
-        w = neat_weigh(self)
+        w =  self.weight
         return w
         w = 0
         if abs(self.center_angle) < (np.pi / 8):
